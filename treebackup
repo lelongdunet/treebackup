@@ -1,0 +1,152 @@
+#!/bin/bash
+
+set -e
+
+confdir="$HOME/.treebackup"
+#libdir="/usr/share/treebackup"
+libdir="$HOME/.treebackup/lib"
+
+source $libdir/gettext.sh
+source $libdir/logger.sh
+source $libdir/util.sh
+
+profile=$1
+conffile=$confdir/$profile.prf
+datafile=$profile.backup.dat
+PREFIX=$profile
+DAROPTIONS="-z"
+verbosedebug="true"
+verbose="true"
+warnings="true"
+BM_LOGGER="true"
+BM_LOGGER_LEVEL="debug"
+
+check_logger
+
+source $conffile
+
+day=$(date "+%d")
+#week=$(date "+%W")
+month=$(date "+%m")
+year=$(date "+%y")
+week=$((($day+2)/7))
+
+
+cd "$BACKUPPATH"
+tmpdatafile=$datafile.tmp
+name=$PREFIX.$year-$month-$week-$day
+
+####################################"
+# Last record memory
+# 
+# YEARBEFORE
+# MONTHBEFORE
+# WEEKBEFORE
+# DAYBEFORE
+# YEARLAST
+# MONTHLAST
+# WEEKLAST
+# DAYLAST
+
+info "Backup of profile $profile, ROOT=$ROOTPATH to $BACKUPPATH"
+
+if [[ -f $datafile ]]; then
+    echo "getting $datafile"
+    source $datafile
+    
+    nextyearbefore=$YEARBEFORE
+    nextmonthbefore=$MONTHBEFORE
+    nextweekbefore=$WEEKBEFORE
+
+    if [[ $year != $YEARLAST ]]; then
+        previous=$PREFIX.$YEARLAST
+        name=$PREFIX.$year
+        link_dar $name $PREFIX.$year-$month
+        link_dar $name $PREFIX.$year-$month-$week
+        link_dar $name $PREFIX.$year-$month-$week-$day
+        #rm -f $PREFIX.$YEARBEFORE-*
+        #rm -f $PREFIX.$YEARLAST-$MONTHBEFORE-*
+        #rm -f $PREFIX.$YEARLAST.$MONTHLAST-$WEEKBEFORE-*
+        rm $PREFIX.$YEARBEFORE-*
+        rm $PREFIX.$MONTHBEFORE-*
+        rm $PREFIX.$WEEKBEFORE-*
+        nextyearbefore=$YEARLAST
+        nextmonthbefore=$YEARLAST-$MONTHLAST
+        nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
+        debug "New year, remove children for year $YEARBEFORE, month $MONTHBEFORE and week $WEEKBEFORE in profile $profile"
+    elif [[ $month != $MONTHLAST ]]; then
+        previous=$PREFIX.$year-$MONTHLAST
+        name=$PREFIX.$year-$month
+        link_dar $name $PREFIX.$year-$month-$week
+        link_dar $name $PREFIX.$year-$month-$week-$day
+        #rm -f $PREFIX.$year-$MONTHBEFORE-*
+        #rm -f $PREFIX.$year-$MONTHLAST-$WEEKBEFORE-*
+        rm $PREFIX.$MONTHBEFORE-*
+        rm $PREFIX.$WEEKBEFORE-*
+        nextmonthbefore=$YEARLAST-$MONTHLAST
+        nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
+        debug "New month, remove children for month $MONTHBEFORE and week $WEEKBEFORE in profile $profile"
+    elif [[ $week != $WEEKLAST ]]; then
+        previous=$PREFIX.$year-$month-$WEEKLAST
+        name=$PREFIX.$year-$month-$week
+        link_dar $name $PREFIX.$year-$month-$week-$day
+        #rm -f $PREFIX.$year-$month-$WEEKBEFORE-*
+        rm $PREFIX.$WEEKBEFORE-*
+        nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
+        debug "New week, remove children for week $WEEKBEFORE in profile $profile"
+    elif [[ $day != $DAYLAST ]]; then
+        previous=$PREFIX.$year-$month-$week-$DAYLAST
+        name=$PREFIX.$year-$month-$week-$day
+    else
+        error "Backup already up to date : nothing to do"
+    fi
+
+    #Make new archive
+    dar $DAROPTIONS -c $name -A $previous -R "$ROOTPATH"
+    append_list_file $previous $name
+    debug "dar $DAROPTIONS -c $name -A $previous -R $ROOTPATH"
+    info "Incremental backup of $profile saved in $BACKUPPATH/$name with reference $previous"
+
+else
+    warning "$datafile does not exist. Make a full archive backup of $profile"
+
+    nextyearbefore="00"
+    nextmonthbefore="00-00"
+    nextweekbefore="00-00-0"
+
+    name=$PREFIX.master
+    link_dar $name $PREFIX.$year
+    link_dar $name $PREFIX.$year-$month
+    link_dar $name $PREFIX.$year-$month-$week
+    link_dar $name $PREFIX.$year-$month-$week-$day
+
+    link_dar $name $PREFIX.$nextyearbefore
+    link_dar $name $PREFIX.$nextmonthbefore
+    link_dar $name $PREFIX.$nextweekbefore
+
+    link_dar $name $PREFIX.$nextyearbefore-X
+    link_dar $name $PREFIX.$nextmonthbefore-X
+    link_dar $name $PREFIX.$nextweekbefore-X
+    #Make new archive
+    dar $DAROPTIONS -c $name -R "$ROOTPATH"
+    create_list_file $name
+    debug "dar $DAROPTIONS -c $name -R $ROOTPATH"
+    info "full backup of $profile saved in $BACKUPPATH/$name"
+fi
+
+
+
+
+#Save tmpdatas for next backup
+echo 'YEARBEFORE='$nextyearbefore > $tmpdatafile
+echo 'MONTHBEFORE='$nextmonthbefore >> $tmpdatafile
+echo 'WEEKBEFORE='$nextweekbefore >> $tmpdatafile
+echo 'YEARLAST='$year >> $tmpdatafile
+echo 'MONTHLAST='$month >> $tmpdatafile
+echo 'WEEKLAST='$week >> $tmpdatafile
+echo 'DAYLAST='$day >> $tmpdatafile
+
+mv $tmpdatafile $datafile
+
+
+
