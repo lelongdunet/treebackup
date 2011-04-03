@@ -2,6 +2,16 @@
 
 set -e
 
+
+#Color values
+NORMAL=`echo -e '\033[0m'`
+BOLD=`echo -e '\033[1m'`
+UNDERLINE=`echo -e '\033[4m'`
+BACKRED=`echo -e '\033[41m'`
+RED=`echo -e '\033[31m'`
+
+
+
 confdir="$HOME/.treebackup"
 #libdir="/usr/share/treebackup"
 libdir="$HOME/.treebackup/lib"
@@ -50,7 +60,17 @@ name=$PREFIX.$year-$month-$week-$day
 
 info "Backup of profile $profile, ROOT=$ROOTPATH to $BACKUPPATH"
 
-if [[ -f $datafile ]]; then
+if [ $# -gt 1 ]; then
+   case $2 in
+       list )
+           ls -ltr $profile.*.lst|grep -v '\->'|sed "s/^.*\s\(\w\+-\w\+-\w\+\s\w\+:\w\+\)\s\(.*\)\.lst\s*$/ $BOLD$UNDERLINE$RED \1 $NORMAL  (\2)/"
+           exit ;;
+       * )
+           echo "$RED Error bad command!" $NORMAL
+           exit 1;;
+   esac
+
+elif [[ -f $datafile ]]; then
     echo "getting $datafile"
     source $datafile
     
