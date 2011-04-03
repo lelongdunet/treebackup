@@ -1,7 +1,23 @@
 #!/bin/bash
 
+function help()
+{
+    echo "treebackup profname [cmd] [args]"
+    echo ""
+    echo "Whithout any command treebackup perform the incremental backup of the specified profile"
+    echo ""
+    echo "Commands:"
+    echo " 'list' : list of all versions"
+    echo " 'mkdb ver' : make a dar_manager database for the specified version"
+    echo " 'help' : display this"
+}
+
 set -e
 
+if [ $# -eq 0 ]; then
+    help
+    exit
+fi
 
 #Color values
 NORMAL=`echo -e '\033[0m'`
@@ -65,8 +81,38 @@ if [ $# -gt 1 ]; then
        list )
            ls -ltr $profile.*.lst|grep -v '\->'|sed "s/^.*\s\(\w\+-\w\+-\w\+\s\w\+:\w\+\)\s\(.*\)\.lst\s*$/ $BOLD$UNDERLINE$RED \1 $NORMAL  (\2)/"
            exit ;;
+       mkdb )
+           if [ $# -lt 3 ]; then
+               echo "$RED You must specify a version!"
+               exit 1
+           fi
+           ver=$3
+           if [[ ! -f $ver.lst ]]; then
+               echo "$RED Version $ver does not exist!"
+               exit 1
+           fi
+           dmdname=$ver.dmd
+           dar_manager -C $dmdname
+           dar_manager -B $dmdname -o -R /
+           echo "Add catalogs to db..."
+           for i in `cat $ver.lst`
+           do
+               echo "     $i"
+               dar_manager -B $dmdname -A $i
+           done
+           echo "ok"
+           echo "--------------------------------"
+           echo "Commands :"
+           echo "'dar_manager -B $dmdname -r path_to_file' to extract a file"
+           echo "'dar_manager -B $dmdname -i' to enter interactive mode"
+           echo "--------------------------------"
+           exit;;
+       help )
+           help
+           exit;;
        * )
            echo "$RED Error bad command!" $NORMAL
+           help
            exit 1;;
    esac
 
