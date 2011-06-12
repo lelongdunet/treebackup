@@ -55,8 +55,14 @@ day=$(date "+%d")
 #week=$(date "+%W")
 month=$(date "+%m")
 year=$(date "+%y")
-week=$((($day+2)/7))
+if [ -z $WEEKBASIS ]; then
+    week='0'
+else
+    d=$((10#$(echo $day)))
+    week=$((($d+2)/7))
+fi
 
+echo $day
 
 cd "$BACKUPPATH"
 tmpdatafile=$datafile.tmp
