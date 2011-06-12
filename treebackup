@@ -133,9 +133,9 @@ elif [[ -f $datafile ]]; then
         #rm -f $PREFIX.$YEARBEFORE-*
         #rm -f $PREFIX.$YEARLAST-$MONTHBEFORE-*
         #rm -f $PREFIX.$YEARLAST.$MONTHLAST-$WEEKBEFORE-*
-        rm $PREFIX.$YEARBEFORE-*
-        rm $PREFIX.$MONTHBEFORE-*
         rm $PREFIX.$WEEKBEFORE-*
+        rm $PREFIX.$MONTHBEFORE-*
+        rm $PREFIX.$YEARBEFORE-*
         nextyearbefore=$YEARLAST
         nextmonthbefore=$YEARLAST-$MONTHLAST
         nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
@@ -147,8 +147,8 @@ elif [[ -f $datafile ]]; then
         link_dar $name $PREFIX.$year-$month-$week-$day
         #rm -f $PREFIX.$year-$MONTHBEFORE-*
         #rm -f $PREFIX.$year-$MONTHLAST-$WEEKBEFORE-*
-        rm $PREFIX.$MONTHBEFORE-*
         rm $PREFIX.$WEEKBEFORE-*
+        rm $PREFIX.$MONTHBEFORE-*
         nextmonthbefore=$YEARLAST-$MONTHLAST
         nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
         debug "New month, remove children for month $MONTHBEFORE and week $WEEKBEFORE in profile $profile"
