@@ -41,6 +41,7 @@ conffile=$confdir/$profile.prf
 datafile=$profile.backup.dat
 PREFIX=$profile
 DAROPTIONS="-z"
+n_trash=3
 verbosedebug="true"
 verbose="true"
 warnings="true"
@@ -65,7 +66,9 @@ fi
 echo $day
 
 cd "$BACKUPPATH"
+trashdir="$BACKUPPATH/trash.$profile"
 tmpdatafile=$datafile.tmp
+lockfile=.lock.$profile
 name=$PREFIX.$year-$month-$week-$day
 
 ####################################"
@@ -128,23 +131,39 @@ if [ $# -gt 1 ]; then
 elif [[ -f $datafile ]]; then
     echo "getting $datafile"
     source $datafile
-    
+
     nextyearbefore=$YEARBEFORE
     nextmonthbefore=$MONTHBEFORE
     nextweekbefore=$WEEKBEFORE
 
+
+    lock
+
+    if test $datafile -nt $lockfile; then
+        unlock
+        error "Incoherent file dates. Check system time!"
+    fi
+
+    #update trash
+    echo "Clear trash..."
+    clear_trash
+
+    lock_info "TRASHEMPTY"
+
+    #start backup
     if [[ $year != $YEARLAST ]]; then
         previous=$PREFIX.$YEARLAST
         name=$PREFIX.$year
         link_dar $name $PREFIX.$year-$month
         link_dar $name $PREFIX.$year-$month-$week
         link_dar $name $PREFIX.$year-$month-$week-$day
-        #rm -f $PREFIX.$YEARBEFORE-*
-        #rm -f $PREFIX.$YEARLAST-$MONTHBEFORE-*
-        #rm -f $PREFIX.$YEARLAST.$MONTHLAST-$WEEKBEFORE-*
-        rm $PREFIX.$WEEKBEFORE-*
-        rm $PREFIX.$MONTHBEFORE-*
-        rm $PREFIX.$YEARBEFORE-*
+        lock_info "LINKED"
+
+        rm_files $PREFIX.$WEEKBEFORE-*
+        rm_files $PREFIX.$MONTHBEFORE-*
+        rm_files $PREFIX.$YEARBEFORE-*
+        lock_info "REMOVED"
+
         nextyearbefore=$YEARLAST
         nextmonthbefore=$YEARLAST-$MONTHLAST
         nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
@@ -154,10 +173,11 @@ elif [[ -f $datafile ]]; then
         name=$PREFIX.$year-$month
         link_dar $name $PREFIX.$year-$month-$week
         link_dar $name $PREFIX.$year-$month-$week-$day
-        #rm -f $PREFIX.$year-$MONTHBEFORE-*
-        #rm -f $PREFIX.$year-$MONTHLAST-$WEEKBEFORE-*
-        rm $PREFIX.$WEEKBEFORE-*
-        rm $PREFIX.$MONTHBEFORE-*
+        lock_info "LINKED"
+
+        rm_files $PREFIX.$WEEKBEFORE-*
+        rm_files $PREFIX.$MONTHBEFORE-*
+        lock_info "REMOVED"
         nextmonthbefore=$YEARLAST-$MONTHLAST
         nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
         debug "New month, remove children for month $MONTHBEFORE and week $WEEKBEFORE in profile $profile"
@@ -165,22 +185,28 @@ elif [[ -f $datafile ]]; then
         previous=$PREFIX.$year-$month-$WEEKLAST
         name=$PREFIX.$year-$month-$week
         link_dar $name $PREFIX.$year-$month-$week-$day
-        #rm -f $PREFIX.$year-$month-$WEEKBEFORE-*
-        rm $PREFIX.$WEEKBEFORE-*
+        lock_info "LINKED"
+        rm_files $PREFIX.$WEEKBEFORE-*
+        lock_info "REMOVED"
         nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
         debug "New week, remove children for week $WEEKBEFORE in profile $profile"
     elif [[ $day != $DAYLAST ]]; then
         previous=$PREFIX.$year-$month-$week-$DAYLAST
         name=$PREFIX.$year-$month-$week-$day
     else
+        unlock
         error "Backup already up to date : nothing to do"
     fi
 
+    lock_info "START"
+    lock_name $name
+
     #Make new archive
+    info "Incremental backup of $profile saved in $BACKUPPATH/$name with reference $previous"
     dar $DAROPTIONS -c $name -A $previous -R "$ROOTPATH"
     append_list_file $previous $name
+    lock_info "SAVED"
     debug "dar $DAROPTIONS -c $name -A $previous -R $ROOTPATH"
-    info "Incremental backup of $profile saved in $BACKUPPATH/$name with reference $previous"
 
 else
     warning "$datafile does not exist. Make a full archive backup of $profile"
@@ -188,6 +214,9 @@ else
     nextyearbefore="00"
     nextmonthbefore="00-00"
     nextweekbefore="00-00-0"
+
+    lock
+    lock_info "FIRST"
 
     name=$PREFIX.master
     link_dar $name $PREFIX.$year
@@ -203,14 +232,19 @@ else
     link_dar $name $PREFIX.$nextmonthbefore-X
     link_dar $name $PREFIX.$nextweekbefore-X
     #Make new archive
+    lock_info "START"
+    lock_name $name
     dar $DAROPTIONS -c $name -R "$ROOTPATH"
     create_list_file $name
+    lock_info "SAVED"
     debug "dar $DAROPTIONS -c $name -R $ROOTPATH"
     info "full backup of $profile saved in $BACKUPPATH/$name"
+
+    #Make an associated trash directory
+    mkdir $trashdir
 fi
 
-
-
+tmp_backup $datafile
 
 #Save tmpdatas for next backup
 echo 'YEARBEFORE='$nextyearbefore > $tmpdatafile
@@ -223,5 +257,5 @@ echo 'DAYLAST='$day >> $tmpdatafile
 
 mv $tmpdatafile $datafile
 
-
+unlock
 
