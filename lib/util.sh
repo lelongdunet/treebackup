@@ -10,8 +10,16 @@ function link_dar()
 {
     #ln -sf $1.1.dar $2.1.dar
     #ln -sf $1.lst $2.lst
-    ln -s $1.1.dar $2.1.dar
-    ln -s $1.lst $2.lst
+    if [ -f $1.1.dar ]; then
+        warning "The symlink $1.1.dar already exists!"
+    else
+        ln -s $1.1.dar $2.1.dar
+    fi
+    if [ -f $1.lst ]; then
+        warning "The symlink $1.lst already exists!"
+    else
+        ln -s $1.lst $2.lst
+    fi
     echo "$2" >> $trashdir/links
 }
 
@@ -54,12 +62,27 @@ function clear_trash()
 
 function rm_file()
 {
-    mv $1 $trashdir/
+    if [ ! -f $1 ]; then
+        warning "File $1 already removed"
+    else
+        mv $1 $trashdir/
+    fi
 }
 
 function rm_files()
 {
-    mv $@ $trashdir/
+    if ls $@ > .ls.tmp 2> .err.tmp; then
+        mv $@ $trashdir/
+    else
+        errnum=$(cat /dev/urandom | env LC_CTYPE=C tr -cd 'a-f0-9' | head -c 8)
+        warning "Some files already removed. See warn.$errnum"
+        mv .err.tmp warn.$errnum
+
+        RM_FILES=$(cat .ls.tmp)
+        if [ ! -z "$RM_FILES" ]; then
+            mv $RM_FILES $trashdir/
+        fi
+    fi
 }
 
 function tmp_backup()
