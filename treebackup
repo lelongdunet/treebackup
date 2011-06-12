@@ -79,7 +79,7 @@ info "Backup of profile $profile, ROOT=$ROOTPATH to $BACKUPPATH"
 if [ $# -gt 1 ]; then
    case $2 in
        list )
-           ls -ltr $profile.*.lst|grep -v '\->'|sed "s/^.*\s\(\w\+-\w\+-\w\+\s\w\+:\w\+\)\s\(.*\)\.lst\s*$/ $BOLD$UNDERLINE$RED \1 $NORMAL  (\2)/"
+           ls -ltr --time-style=long-iso $profile.*.lst|grep -v '\->'|sed "s/^.*\s\(\w\+-\w\+-\w\+\s\w\+:\w\+\)\s\(.*\)\.lst\s*$/ $BOLD$UNDERLINE$RED \1 $NORMAL  (\2)/"
            exit ;;
        mkdb )
            if [ $# -lt 3 ]; then
