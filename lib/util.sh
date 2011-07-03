@@ -8,17 +8,16 @@
 #########################################
 function link_dar()
 {
-    #ln -sf $1.1.dar $2.1.dar
-    #ln -sf $1.lst $2.lst
-    if [ -f $1.1.dar ]; then
-        warning "The symlink $1.1.dar already exists!"
+    target=$(echo $1|sed 's/^.*\///')
+    if [ -f $2.1.dar ]; then
+        warning "The symlink $2.1.dar already exists!"
     else
-        ln -s $1.1.dar $2.1.dar
+        ln -s $target.1.dar $2.1.dar
     fi
-    if [ -f $1.lst ]; then
-        warning "The symlink $1.lst already exists!"
+    if [ -f $2.lst ]; then
+        warning "The symlink $2.lst already exists!"
     else
-        ln -s $1.lst $2.lst
+        ln -s $target.lst $2.lst
     fi
     echo "$2" >> $trashdir/links
 }

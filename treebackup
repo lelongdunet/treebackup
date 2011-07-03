@@ -31,6 +31,7 @@ RED=`echo -e '\033[31m'`
 confdir="$HOME/.treebackup"
 #libdir="/usr/share/treebackup"
 libdir="$HOME/.treebackup/lib"
+datadir="./"
 
 source $libdir/gettext.sh
 source $libdir/logger.sh
@@ -39,7 +40,6 @@ source $libdir/util.sh
 profile=$1
 conffile=$confdir/$profile.prf
 datafile=$profile.backup.dat
-PREFIX=$profile
 DAROPTIONS="-z"
 n_trash=3
 verbosedebug="true"
@@ -51,6 +51,8 @@ BM_LOGGER_LEVEL="debug"
 check_logger
 
 source $conffile
+
+PREFIX=$datadir$profile
 
 day=$(date "+%d")
 #week=$(date "+%W")
@@ -88,6 +90,7 @@ info "Backup of profile $profile, ROOT=$ROOTPATH to $BACKUPPATH"
 if [ $# -gt 1 ]; then
    case $2 in
        list )
+           cd $datadir
            ls -ltr --time-style=long-iso $profile.*.lst|grep -v '\->'|sed "s/^.*\s\(\w\+-\w\+-\w\+\s\w\+:\w\+\)\s\(.*\)\.lst\s*$/ $BOLD$UNDERLINE$RED \1 $NORMAL  (\2)/"
            exit ;;
        mkdb )
@@ -96,7 +99,8 @@ if [ $# -gt 1 ]; then
                exit 1
            fi
            ver=$3
-           if [[ ! -f $ver.lst ]]; then
+           lstfile=$datadir$ver.lst
+           if [[ ! -f $lstfile ]]; then
                echo "$RED Version $ver does not exist!"
                exit 1
            fi
@@ -104,13 +108,13 @@ if [ $# -gt 1 ]; then
            dar_manager -C $dmdname
            dar_manager -B $dmdname -o -R restore/$ver -O -wa
            if [[ ! -d restore/$ver ]]; then
-               mkdir restore/$ver
+               mkdir -p restore/$ver
            fi
            echo "Add catalogs to db..."
-           for i in `cat $ver.lst`
+           for i in `cat $lstfile`
            do
                echo "     $i"
-               dar_manager -B $dmdname -A $i
+               dar_manager -B $dmdname -A $datadir$i
            done
            echo "ok"
            echo "--------------------------------"
