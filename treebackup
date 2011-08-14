@@ -243,9 +243,6 @@ else
     lock_info "SAVED"
     debug "dar $DAROPTIONS -c $name -R $ROOTPATH"
     info "full backup of $profile saved in $BACKUPPATH/$name"
-
-    #Make an associated trash directory
-    mkdir $trashdir
 fi
 
 tmp_backup $datafile

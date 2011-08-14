@@ -19,6 +19,10 @@ function link_dar()
     else
         ln -s $target.lst $2.lst
     fi
+
+    if [ ! -d $trashdir ]; then
+        mkdir $trashdir
+    fi
     echo "$2" >> $trashdir/links
 }
 
@@ -38,7 +42,7 @@ function append_list_file()
 function clear_trash()
 {
     if [ ! -d $trashdir ]; then
-        mkdir $trashdir
+        return
     fi
 
     #if trash is empty do nothing
@@ -61,6 +65,10 @@ function clear_trash()
 
 function rm_file()
 {
+    if [ ! -d $trashdir ]; then
+        mkdir $trashdir
+    fi
+
     if [ ! -f $1 ]; then
         warning "File $1 already removed"
     else
@@ -70,6 +78,10 @@ function rm_file()
 
 function rm_files()
 {
+    if [ ! -d $trashdir ]; then
+        mkdir $trashdir
+    fi
+
     if ls $@ > .ls.tmp 2> .err.tmp; then
         mv $@ $trashdir/
     else
@@ -86,6 +98,10 @@ function rm_files()
 
 function tmp_backup()
 {
+    if [ ! -d $trashdir ]; then
+        mkdir $trashdir
+    fi
+
     cp -a $1 $trashdir/
 }
 
