@@ -9,6 +9,8 @@ function help()
     echo "Commands:"
     echo " 'list' : list of all versions"
     echo " 'mkdb ver' : make a dar_manager database for the specified version"
+    echo " 'sync' : Synchronize backup data with distant replica"
+    echo " 'mirror' : Install distant replica directory"
     echo " 'help' : display this"
 }
 
@@ -29,9 +31,14 @@ RED=`echo -e '\033[31m'`
 
 
 confdir="$HOME/.treebackup"
-#libdir="/usr/share/treebackup"
 libdir="$HOME/.treebackup/lib"
-datadir="./"
+datadir="."
+
+
+if [ ! -d $libdir/ ]; then
+    libdir=bin/lib
+fi
+bindir="$libdir/bin"
 
 source $libdir/gettext.sh
 source $libdir/logger.sh
@@ -50,9 +57,27 @@ BM_LOGGER_LEVEL="debug"
 
 check_logger
 
-source $conffile
+if [ ! -f .replica.$profile ]; then
+    source $conffile
+else
+    #if it is a replica no configuration file
+    datadir=data
+    BACKUPPATH=.
+fi
 
-PREFIX=$datadir$profile
+function LISTBACKUP()
+{
+    ls -1 $PREFIX.* | sed 's/^.*\///' | awk '{print ">", $0}'
+}
+
+if [ ! -z $MIRROR_PORT ]; then
+    SSHCMD="ssh -p$MIRROR_PORT"
+else
+    SSHCMD="ssh"
+fi
+SHELL=bash
+
+PREFIX=$datadir/$profile
 
 day=$(date "+%d")
 #week=$(date "+%W")
@@ -99,7 +124,7 @@ if [ $# -gt 1 ]; then
                exit 1
            fi
            ver=$3
-           lstfile=$datadir$ver.lst
+           lstfile=$datadir/$ver.lst
            if [[ ! -f $lstfile ]]; then
                echo "$RED Version $ver does not exist!"
                exit 1
@@ -114,7 +139,7 @@ if [ $# -gt 1 ]; then
            for i in `cat $lstfile`
            do
                echo "     $i"
-               dar_manager -B $dmdname -A $datadir$i
+               dar_manager -B $dmdname -A $datadir/$i
            done
            echo "ok"
            echo "--------------------------------"
@@ -122,6 +147,31 @@ if [ $# -gt 1 ]; then
            echo "'dar_manager -B $dmdname -r path_to_file' to extract a file"
            echo "'dar_manager -B $dmdname -i' to enter interactive mode"
            echo "--------------------------------"
+           exit;;
+       mirror )
+           rsync -e "$SSHCMD" -auvh $bindir/ $MIRROR_HOST:$MIRROR_PATH/bin/
+           $SSHCMD $MIRROR_HOST $SHELL $MIRROR_PATH/bin/setupreplica.bash $profile
+           exit;;
+       sync )
+           $SSHCMD $MIRROR_HOST $SHELL $MIRROR_PATH/bin/presync.bash $profile
+           rsync -e "$SSHCMD" -auvh $PREFIX.* $MIRROR_HOST:$MIRROR_PATH/data/
+           rsync -e "$SSHCMD" -u $datafile $MIRROR_HOST:$MIRROR_PATH/
+           $SSHCMD $MIRROR_HOST $SHELL $MIRROR_PATH/bin/postsync.bash $profile > .postsync.out
+           LISTBACKUP|egrep '^>' > .local.list
+           egrep '^>' .postsync.out > .dist.list
+           diff .local.list .dist.list
+           exit;;
+       postsync )
+           if [ ! -f .replica.$profile ]; then
+               echo "This dir is not a replica of $PROFILE!"
+               exit 1
+           fi
+           if [ ! -f $datafile ]; then
+               echo "Critical file $datafile absent! Sync not made properly."
+               exit 1
+           fi
+           unlock
+           LISTBACKUP
            exit;;
        help )
            help
@@ -205,12 +255,17 @@ elif [[ -f $datafile ]]; then
     lock_info "START"
     lock_name $name
 
-    #Make new archive
-    info "Incremental backup of $profile saved in $BACKUPPATH/$name with reference $previous"
-    dar $DAROPTIONS -c $name -A $previous -R "$ROOTPATH"
-    append_list_file $previous $name
-    lock_info "SAVED"
-    debug "dar $DAROPTIONS -c $name -A $previous -R $ROOTPATH"
+    if [ -f .replica.$profile ]; then
+        #If current backup is a replica, d'ont create archives
+        lock_info "WAITSYNC"
+    else
+        #Make new archive
+        info "Incremental backup of $profile saved in $BACKUPPATH/$name with reference $previous"
+        dar $DAROPTIONS -c $name -A $previous -R "$ROOTPATH"
+        append_list_file $previous $name
+        lock_info "SAVED"
+        debug "dar $DAROPTIONS -c $name -A $previous -R $ROOTPATH"
+    fi
 
 else
     warning "$datafile does not exist. Make a full archive backup of $profile"
@@ -245,7 +300,9 @@ else
     info "full backup of $profile saved in $BACKUPPATH/$name"
 fi
 
-tmp_backup $datafile
+if [ -f $datafile ]; then
+    tmp_backup $datafile
+fi
 
 #Save tmpdatas for next backup
 echo 'YEARBEFORE='$nextyearbefore > $tmpdatafile
@@ -256,7 +313,11 @@ echo 'MONTHLAST='$month >> $tmpdatafile
 echo 'WEEKLAST='$week >> $tmpdatafile
 echo 'DAYLAST='$day >> $tmpdatafile
 
-mv $tmpdatafile $datafile
 
-unlock
+if [ -f .replica.$profile ]; then
+    rm $datafile
+else
+    mv $tmpdatafile $datafile
+    unlock
+fi
 
