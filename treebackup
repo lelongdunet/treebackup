@@ -67,7 +67,7 @@ fi
 
 function LISTBACKUP()
 {
-    ls -1 $PREFIX.* | sed 's/^.*\///' | awk '{print ">", $0}'
+    ls -1 $PREFIX_PATH.* | sed 's/^.*\///' | awk '{print ">", $0}'
 }
 
 if [ ! -z $MIRROR_PORT ]; then
@@ -77,7 +77,8 @@ else
 fi
 SHELL=bash
 
-PREFIX=$datadir/$profile
+PREFIX=$profile
+PREFIX_PATH=$datadir/$profile
 
 day=$(date "+%d")
 #week=$(date "+%W")
@@ -97,6 +98,7 @@ trashdir="$BACKUPPATH/trash.$profile"
 tmpdatafile=$datafile.tmp
 lockfile=.lock.$profile
 name=$PREFIX.$year-$month-$week-$day
+name_path=$datadir/$name
 
 ####################################"
 # Last record memory
@@ -154,7 +156,7 @@ if [ $# -gt 1 ]; then
            exit;;
        sync )
            $SSHCMD $MIRROR_HOST $SHELL $MIRROR_PATH/bin/presync.bash $profile
-           rsync -e "$SSHCMD" -auvh $PREFIX.* $MIRROR_HOST:$MIRROR_PATH/data/
+           rsync -e "$SSHCMD" -auvh $PREFIX_PATH.* $MIRROR_HOST:$MIRROR_PATH/data/
            rsync -e "$SSHCMD" -u $datafile $MIRROR_HOST:$MIRROR_PATH/
            $SSHCMD $MIRROR_HOST $SHELL $MIRROR_PATH/bin/postsync.bash $profile > .postsync.out
            LISTBACKUP|egrep '^>' > .local.list
@@ -208,14 +210,15 @@ elif [[ -f $datafile ]]; then
     if [[ $year != $YEARLAST ]]; then
         previous=$PREFIX.$YEARLAST
         name=$PREFIX.$year
-        link_dar $name $PREFIX.$year-$month
-        link_dar $name $PREFIX.$year-$month-$week
-        link_dar $name $PREFIX.$year-$month-$week-$day
+        name_path=$datadir/$name
+        link_dar $name_path $PREFIX_PATH.$year-$month
+        link_dar $name_path $PREFIX_PATH.$year-$month-$week
+        link_dar $name_path $PREFIX_PATH.$year-$month-$week-$day
         lock_info "LINKED"
 
-        rm_files $PREFIX.$WEEKBEFORE-*
-        rm_files $PREFIX.$MONTHBEFORE-*
-        rm_files $PREFIX.$YEARBEFORE-*
+        rm_files $PREFIX_PATH.$WEEKBEFORE-*
+        rm_files $PREFIX_PATH.$MONTHBEFORE-*
+        rm_files $PREFIX_PATH.$YEARBEFORE-*
         lock_info "REMOVED"
 
         nextyearbefore=$YEARLAST
@@ -225,12 +228,13 @@ elif [[ -f $datafile ]]; then
     elif [[ $month != $MONTHLAST ]]; then
         previous=$PREFIX.$year-$MONTHLAST
         name=$PREFIX.$year-$month
-        link_dar $name $PREFIX.$year-$month-$week
-        link_dar $name $PREFIX.$year-$month-$week-$day
+        name_path=$datadir/$name
+        link_dar $name_path $PREFIX_PATH.$year-$month-$week
+        link_dar $name_path $PREFIX_PATH.$year-$month-$week-$day
         lock_info "LINKED"
 
-        rm_files $PREFIX.$WEEKBEFORE-*
-        rm_files $PREFIX.$MONTHBEFORE-*
+        rm_files $PREFIX_PATH.$WEEKBEFORE-*
+        rm_files $PREFIX_PATH.$MONTHBEFORE-*
         lock_info "REMOVED"
         nextmonthbefore=$YEARLAST-$MONTHLAST
         nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
@@ -238,15 +242,17 @@ elif [[ -f $datafile ]]; then
     elif [[ $week != $WEEKLAST ]]; then
         previous=$PREFIX.$year-$month-$WEEKLAST
         name=$PREFIX.$year-$month-$week
-        link_dar $name $PREFIX.$year-$month-$week-$day
+        name_path=$datadir/$name
+        link_dar $name_path $PREFIX_PATH.$year-$month-$week-$day
         lock_info "LINKED"
-        rm_files $PREFIX.$WEEKBEFORE-*
+        rm_files $PREFIX_PATH.$WEEKBEFORE-*
         lock_info "REMOVED"
         nextweekbefore=$YEARLAST-$MONTHLAST-$WEEKLAST
         debug "New week, remove children for week $WEEKBEFORE in profile $profile"
     elif [[ $day != $DAYLAST ]]; then
         previous=$PREFIX.$year-$month-$week-$DAYLAST
         name=$PREFIX.$year-$month-$week-$day
+        name_path=$datadir/$name
     else
         unlock
         error "Backup already up to date : nothing to do"
@@ -260,8 +266,8 @@ elif [[ -f $datafile ]]; then
         lock_info "WAITSYNC"
     else
         #Make new archive
-        info "Incremental backup of $profile saved in $BACKUPPATH/$name with reference $previous"
-        dar $DAROPTIONS -c $name -A $previous -R "$ROOTPATH"
+        info "Incremental backup of $profile saved in $BACKUPPATH/$name_path with reference $previous"
+        dar $DAROPTIONS -c $name_path -A $datadir/$previous -R "$ROOTPATH"
         append_list_file $previous $name
         lock_info "SAVED"
         debug "dar $DAROPTIONS -c $name -A $previous -R $ROOTPATH"
@@ -278,26 +284,27 @@ else
     lock_info "FIRST"
 
     name=$PREFIX.master
-    link_dar $name $PREFIX.$year
-    link_dar $name $PREFIX.$year-$month
-    link_dar $name $PREFIX.$year-$month-$week
-    link_dar $name $PREFIX.$year-$month-$week-$day
+    name_path=$datadir/$name
+    link_dar $name_path $PREFIX_PATH.$year
+    link_dar $name_path $PREFIX_PATH.$year-$month
+    link_dar $name_path $PREFIX_PATH.$year-$month-$week
+    link_dar $name_path $PREFIX_PATH.$year-$month-$week-$day
 
-    link_dar $name $PREFIX.$nextyearbefore
-    link_dar $name $PREFIX.$nextmonthbefore
-    link_dar $name $PREFIX.$nextweekbefore
+    link_dar $name_path $PREFIX_PATH.$nextyearbefore
+    link_dar $name_path $PREFIX_PATH.$nextmonthbefore
+    link_dar $name_path $PREFIX_PATH.$nextweekbefore
 
-    link_dar $name $PREFIX.$nextyearbefore-X
-    link_dar $name $PREFIX.$nextmonthbefore-X
-    link_dar $name $PREFIX.$nextweekbefore-X
+    link_dar $name_path $PREFIX_PATH.$nextyearbefore-X
+    link_dar $name_path $PREFIX_PATH.$nextmonthbefore-X
+    link_dar $name_path $PREFIX_PATH.$nextweekbefore-X
     #Make new archive
     lock_info "START"
     lock_name $name
-    dar $DAROPTIONS -c $name -R "$ROOTPATH"
+    dar $DAROPTIONS -c $name_path -R "$ROOTPATH"
     create_list_file $name
     lock_info "SAVED"
     debug "dar $DAROPTIONS -c $name -R $ROOTPATH"
-    info "full backup of $profile saved in $BACKUPPATH/$name"
+    info "full backup of $profile saved in $BACKUPPATH/$name_path"
 fi
 
 if [ -f $datafile ]; then

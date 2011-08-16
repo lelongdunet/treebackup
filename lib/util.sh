@@ -30,13 +30,13 @@ function link_dar()
 
 function create_list_file()
 {
-    echo $1 > $1.lst
+    echo $1 > $datadir/$1.lst
 }
 
 function append_list_file()
 {
-    cp $1.lst $2.lst
-    echo $2 >> $2.lst
+    cp $datadir/$1.lst $datadir/$2.lst
+    echo $2 >> $datadir/$2.lst
 }
 
 function clear_trash()
