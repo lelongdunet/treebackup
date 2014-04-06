@@ -1,4 +1,5 @@
 # Copyright © 2005-2006 Alexis Sukrieh
+# Imported from Backup Manager project for TreeBackup
 #
 # See the AUTHORS file for details.
 #

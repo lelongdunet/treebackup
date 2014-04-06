@@ -1,4 +1,5 @@
 # Copyright (C) 2005 The Backup Manager Authors
+# Imported from Backup Manager project for TreeBackup
 #
 # See the AUTHORS file for details.
 #
