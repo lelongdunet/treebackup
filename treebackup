@@ -94,6 +94,11 @@ BM_LOGGER_LEVEL="debug"
 check_logger
 
 if [ ! -f .replica.$profile ]; then
+    if [ ! -f "$conffile" ]; then
+        echoerr "Profile $profile not found."
+        echoerr " > configure it in file $conffile"
+        exit 2
+    fi
     source $conffile
 else
     #if it is a replica no configuration file
