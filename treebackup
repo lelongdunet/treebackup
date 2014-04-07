@@ -106,8 +106,6 @@ else
     week=$((($d+2)/7))
 fi
 
-echo $day
-
 cd "$BACKUPPATH"
 trashdir="$BACKUPPATH/trash.$profile"
 tmpdatafile=$datafile.tmp
