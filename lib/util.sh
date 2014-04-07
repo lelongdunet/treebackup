@@ -149,4 +149,30 @@ function unlock()
     rm_file $lockfile
 }
 
+function get_year()
+{
+    if [ -n "$fakeyear" ]; then
+        echo "$fakeyear"
+    else
+        date "+%y"
+    fi
+}
+
+function get_month()
+{
+    if [ -n "$fakemonth" ]; then
+        echo "$fakemonth"
+    else
+        date "+%m"
+    fi
+}
+
+function get_day()
+{
+    if [ -n "$fakeday" ]; then
+        echo "$fakeday"
+    else
+        date "+%d"
+    fi
+}
 

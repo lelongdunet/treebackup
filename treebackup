@@ -95,10 +95,10 @@ SHELL=bash
 PREFIX=$profile
 PREFIX_PATH=$datadir/$profile
 
-day=$(date "+%d")
+day=$(get_day)
 #week=$(date "+%W")
-month=$(date "+%m")
-year=$(date "+%y")
+month=$(get_month)
+year=$(get_year)
 if [ -z $WEEKBASIS ]; then
     week='0'
 else
