@@ -300,6 +300,16 @@ else
 
     name=$PREFIX.master
     name_path=$datadir/$name
+
+    mkdir -p "$datadir"
+
+    #Make new archive
+    lock_info "START"
+    lock_name $name
+    dar $DAROPTIONS -c $name_path -R "$ROOTPATH"
+    create_list_file $name
+
+    #Build base nodes as symlinks to first archive master
     link_dar $name_path $PREFIX_PATH.$year
     link_dar $name_path $PREFIX_PATH.$year-$month
     link_dar $name_path $PREFIX_PATH.$year-$month-$week
@@ -312,11 +322,8 @@ else
     link_dar $name_path $PREFIX_PATH.$nextyearbefore-X
     link_dar $name_path $PREFIX_PATH.$nextmonthbefore-X
     link_dar $name_path $PREFIX_PATH.$nextweekbefore-X
-    #Make new archive
-    lock_info "START"
-    lock_name $name
-    dar $DAROPTIONS -c $name_path -R "$ROOTPATH"
-    create_list_file $name
+
+    #End creation
     lock_info "SAVED"
     debug "dar $DAROPTIONS -c $name -R $ROOTPATH"
     info "full backup of $profile saved in $BACKUPPATH/$name_path"
