@@ -29,6 +29,30 @@ function help()
     echo " 'help' : display this"
 }
 
+function echoerr()
+{
+    echo -e "$ERRCOL$1$NORMAL" >&2
+}
+
+function look_for_lib()
+{
+    bin_directory="$(readlink -f "$1")"
+    bin_directory_parent="$(dirname "$bin_directory")"
+    if [ -d "$bin_directory/lib/bin/" ]; then
+        echo "$bin_directory/lib"
+        return
+    elif [ -d "$bin_directory_parent/lib/treebackup/bin/" ]; then
+        echo "$bin_directory_parent/lib/treebackup"
+        return
+    elif [ -d "$HOME/.treebackup/lib/bin/" ]; then
+        echo "$HOME/.treebackup/lib"
+        return
+    else
+        echoerr "lib directory not found!"
+        exit 1
+    fi
+}
+
 set -e
 
 if [ $# -eq 0 ]; then
@@ -49,10 +73,7 @@ confdir="$HOME/.treebackup"
 libdir="$HOME/.treebackup/lib"
 datadir="."
 
-
-if [ ! -d $libdir/ ]; then
-    libdir=bin/lib
-fi
+libdir=$(look_for_lib "$(dirname "$0")")
 bindir="$libdir/bin"
 
 source $libdir/gettext.sh

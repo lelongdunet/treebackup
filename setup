@@ -1,0 +1,30 @@
+#!/bin/bash
+
+INSTAL_TARGET_BASE='/usr/local'
+bindir="$INSTAL_TARGET_BASE/bin/"
+libdir="$INSTAL_TARGET_BASE/lib/treebackup"
+remotebin="$libdir/bin"
+
+cd "$(dirname "$0")"
+
+if ! which dar > /dev/null; then
+    echoerr "dar must be installed to use treebackup"
+    echoerr "Setup failed!"
+    exit 1
+fi
+
+set -e
+
+cp -a treebackup "$bindir"
+mkdir -p "$libdir"
+
+cp -a lib/*.* "$libdir/"
+if [ -L "$remotebin" ]; then
+    rm "$remotebin"
+fi
+mkdir -p "$remotebin"
+
+cp postsync.bash presync.bash setupreplica.bash "$remotebin/"
+
+echo "TreeBackup succesfully installed"
+
